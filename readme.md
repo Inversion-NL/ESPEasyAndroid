@@ -1,7 +1,7 @@
 # Welcome to ESPEasyHelper!
 
 This library will help you to communicate with your ESPEasy device.
-It can: 
+It can:
   - Connect to ESPEasy device
   - Do WiFi setup
   - Upload files such as rules/config/firmware
@@ -11,20 +11,20 @@ It can:
 # Installation
 
 **Step 1.** Add the JitPack repository to your build file
-```css
+```
 allprojects {
-		repositories {
-			...
-			maven { url 'https://jitpack.io' }
-		}
+	repositories {
+		...
+		maven { url 'https://jitpack.io' }
 	}
+}
 ```
 **Step 2.**  Add the dependency
 
-```css
-	dependencies {
-	        implementation 'com.github.messbees:ESPEasyAndroid:v1.1.0'
-	}
+```
+dependencies {
+        implementation 'com.github.messbees:ESPEasyAndroid:v1.0'
+}
 ```
 ## Connect your Android to ESPEasy device
 Use this to connect to ESPEasy:
