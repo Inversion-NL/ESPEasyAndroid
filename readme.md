@@ -23,7 +23,7 @@ allprojects {
 
 ```
 dependencies {
-        implementation 'com.github.messbees:ESPEasyAndroid:v1.0'
+        implementation 'com.github.messbees:ESPEasyAndroid:v1.1.0'
 }
 ```
 ## Connect your Android to ESPEasy device
