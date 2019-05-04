@@ -1,6 +1,12 @@
 # Welcome to ESPEasyHelper!
 
 This library will help you to communicate with your ESPEasy device.
+It can: 
+  - Connect to ESPEasy device
+  - Do WiFi setup
+  - Upload files such as rules/config/firmware
+  - Get Json data
+  - Do Factory reset
 
 # Installation
 
@@ -17,7 +23,7 @@ allprojects {
 
 ```css
 	dependencies {
-	        implementation 'com.github.messbees:ESPEasyAndroid:v1.0'
+	        implementation 'com.github.messbees:ESPEasyAndroid:v1.1.0'
 	}
 ```
 ## Connect your Android to ESPEasy device
@@ -63,6 +69,45 @@ mESPEasy.setupEsp(SSID, key, new SetupListener() {
 });
 ```
 After successful setup method getIp() will return IP address of ESPEasy device in new network.
+
+## Get JSON
+
+```java
+mESPEasy.getJson(new JsonListener() {
+            @Override
+            public void onResponse(JSONObject jsonObject) {
+                try {
+                    String ip = jsonObject
+                            .getJSONObject("WiFi")
+                            .getString("IP");
+					// do something
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onFail(Exception e) {
+                Log.e(TAG, e.getMessage());
+            }
+        });
+```
+
+## Factory Reset
+
+```java
+mESPEasy.factoryReset(new ResponseListener() {
+            @Override
+            public void onResponse() {
+				Log.d(TAG, "Successful reset");
+            }
+
+            @Override
+            public void onFail(Exception e) {
+                Log.e(TAG, e.getMessage());
+            }
+        });
+```
 
 ## Upload files
 

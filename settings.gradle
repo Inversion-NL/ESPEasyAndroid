@@ -1,1 +1,1 @@
-include ':app', ':espeasyhelper'
+include ':espeasyhelper'

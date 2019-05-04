@@ -14,7 +14,6 @@ import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
-import com.android.volley.ServerError;
 import com.android.volley.TimeoutError;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
@@ -34,6 +33,7 @@ import java.nio.ByteOrder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import static android.content.Context.WIFI_SERVICE;
 
@@ -46,15 +46,19 @@ public class ESPEasy {
     public interface SetupListener {
         void onSuccess();
         void onCheckTick();
-        void onFail(String errorMessage);
+        void onFail(Exception e);
     }
     public interface UploadListener {
         void onUpload();
-        void onFail(String message);
+        void onFail(Exception e);
     }
     public interface JsonListener {
         void onResponse(JSONObject jsonObject);
-        void onFail(String message);
+        void onFail(Exception e);
+    }
+    public interface ResponseListener {
+        void onResponse();
+        void onFail(Exception e);
     }
 
     private Context context;
@@ -128,7 +132,7 @@ public class ESPEasy {
      * Gets ESP data
      * @param listener Response listener
      */
-    void getJson(final JsonListener listener) {
+    public void getJson(final JsonListener listener) {
         String url = "http:/" + "/" + ip + "/json";
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST,
@@ -140,19 +144,20 @@ public class ESPEasy {
                             JSONObject json = new JSONObject(response);
                             listener.onResponse(json);
                         } catch (JSONException e) {
-                            listener.onFail(e.getMessage());
+                            listener.onFail(e);
                         }
                     }
                 },
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        if (error.getMessage() == null) {
-                            String errorString = "";
-                            if(error instanceof TimeoutError) {
-                                errorString = "Connection time out";
-                                listener.onFail(errorString);
-                            }
+                        if (error.networkResponse == null) {
+                            if(error instanceof TimeoutError)
+                                listener.onFail(new TimeoutException());
+                            else
+                                listener.onFail(new Exception());
+                        } else {
+                            listener.onFail(new Exception(error.getMessage()));
                         }
                     }
                 }) {
@@ -160,6 +165,7 @@ public class ESPEasy {
         };
         queue.add(stringRequest);
     }
+
 
 
     /**
@@ -208,18 +214,12 @@ public class ESPEasy {
                     @Override
                     public void onErrorResponse(VolleyError error) {
                         if (error.networkResponse == null) {
-                            String errorString = "";
-                            if(error instanceof TimeoutError) {
-                                errorString = "Connection time out";
-                            }
-                            else if (error instanceof ServerError)
-                                errorString = "Server error";
+                            if(error instanceof TimeoutError)
+                                listener.onFail(new TimeoutException());
                             else
-                                errorString = "Unknown error";
-                            listener.onFail(errorString);
+                                listener.onFail(new Exception());
                         } else {
-                            String responseCode = Integer.toString(error.networkResponse.statusCode);
-                            listener.onFail("HTTP code is " + responseCode);
+                            listener.onFail(new Exception(error.getMessage()));
                         }
                     }
                 }) {
@@ -289,24 +289,19 @@ public class ESPEasy {
                             if (response.contains("Upload OK!")) {
                                 listener.onUpload();
                             } else {
-                                listener.onFail("Error loading config");
+                                listener.onFail(new Exception("Wrong file"));
                             }
                         }
                     }, new Response.ErrorListener() {
                 @Override
                 public void onErrorResponse(VolleyError error) {
                     if (error.networkResponse == null) {
-                        String errorString = "";
-                        if(error instanceof TimeoutError) {
-                            errorString = "Time out";
-                        }
-                        else if (error instanceof ServerError)
-                            errorString = "Server error";
+                        if(error instanceof TimeoutError)
+                            listener.onFail(new TimeoutException());
                         else
-                            errorString = "Unknown error";
-                        listener.onFail(errorString);
+                            listener.onFail(new Exception());
                     } else {
-                        listener.onFail(error.getMessage());
+                        listener.onFail(new Exception(error.getMessage()));
                     }
                 }
             }) {
@@ -327,7 +322,7 @@ public class ESPEasy {
             };
             queue.add(request);
         } catch (IOException e) {
-            listener.onFail(e.getMessage());
+            listener.onFail(e);
         }
     }
 
@@ -372,7 +367,7 @@ public class ESPEasy {
                             listener.onSuccess();
                             ip = getDefaultGateway();
                         } else {
-                            listener.onFail("Wrong SSID or password!");
+                            listener.onFail(new Exception("Wrong SSID or password!"));
                         }
                     }
                 },
@@ -380,18 +375,12 @@ public class ESPEasy {
                     @Override
                     public void onErrorResponse(VolleyError error) {
                         if (error.networkResponse == null) {
-                            String errorString = "";
-                            if(error instanceof TimeoutError) {
-                                errorString = "Connection time out";
-                            }
-                            else if (error instanceof ServerError)
-                                errorString = "Server error";
+                            if(error instanceof TimeoutError)
+                                listener.onFail(new TimeoutException());
                             else
-                                errorString = "Unknown error";
-                            listener.onFail(errorString);
+                                listener.onFail(new Exception());
                         } else {
-                            String responseCode = Integer.toString(error.networkResponse.statusCode);
-                            listener.onFail("HTTP code is " + responseCode);
+                            listener.onFail(new Exception(error.getMessage()));
                         }
                     }
                 });
@@ -462,4 +451,51 @@ public class ESPEasy {
         wifiManager.enableNetwork(networkID, true);
         wifiManager.reconnect();
     }
+
+    /**
+     * Sends Factory Reset request
+     *
+     * @param listener response listener
+     */
+    public void factoryReset(final ResponseListener listener) {
+        String url = "http:/" + "/" + ip + "/factoryreset";
+        StringRequest stringRequest = new StringRequest(Request.Method.POST,
+                url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        listener.onResponse();
+                    }
+                },
+                new Response.ErrorListener() {
+
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        if (error.networkResponse == null) {
+                            if(error instanceof TimeoutError)
+                                listener.onFail(new TimeoutException());
+                            else
+                                listener.onFail(new Exception());
+                        } else {
+                            listener.onFail(new Exception(error.getMessage()));
+                        }
+                    }
+                }) {
+
+            @Override
+            public String getBodyContentType() {
+                return "application/x-www-form-urlencoded; charset=UTF-8";
+            }
+
+            @Override
+            protected Map<String, String> getParams() {
+                Map<String, String> params = new HashMap<>();
+                params.put("fdm", "0");
+                params.put("performfactoryreset", "Factory Reset");
+                return params;
+            }
+        };
+        queue.add(stringRequest);
+    }
+
 }
